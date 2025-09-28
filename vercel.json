@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "llm-playground",
   "builds": [
     {
       "src": "server.js",
@@ -27,10 +26,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "server.js": {
-      "maxDuration": 30
-    }
   }
 }

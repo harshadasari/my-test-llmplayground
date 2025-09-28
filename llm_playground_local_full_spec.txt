@@ -1,0 +1,147 @@
+# LLM PLAYGROUND — TRAE BUILDER INSTRUCTION SPEC (LOCAL-ONLY, FULL WEBSITE)
+# Purpose
+Build a fully working **local** LLM Playground web app (ChatGPT-style) that lets me chat with models from **OpenAI, Google Gemini, and Groq** using my API keys. I do **not** want to write code manually — use Trae Builder to generate everything (frontend + backend + middleware) and wire up all buttons so the site is actually usable. **No deployment now** (localhost only).
+
+---
+## 0) Scope & Non-Goals
+- Scope: A complete, working website on **http://localhost** with a ChatGPT-like UI and an internal API powering chat.
+- Non-goals today: CI/CD, cloud deployment, auth/SAML, streaming tokens, file uploads, provider model auto-discovery.
+- Next-step (future): deploy to Vercel. Do NOT do this now.
+
+---
+## 1) Environment & Secrets (Local)
+Use environment variables only (no hardcoding). Expect these to be present before starting the app:
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+- `GROQ_API_KEY`
+- `HF_API_KEY`  (Hugging Face Inference; used for safety checks — keep this integrated)
+
+If a key is missing, show a clear, friendly banner in the UI and gracefully disable that provider until keys are present.
+
+---
+## 2) Providers & Models (Top 2 Each)
+Provide a static model list (no network calls required to get the list). Use EXACT ids:
+
+- **OpenAI**: `gpt-4o`, `gpt-4o-mini`
+- **Google Gemini**: `gemini-1.5-pro`, `gemini-1.5-flash`
+- **Groq**: `llama3-70b-8192`, `llama3-8b-8192`
+
+When user selects a provider, the Model dropdown should show only these two models for that provider.
+
+---
+## 3) Tunable Model Settings (UI Controls)
+All appear in a settings panel on the right, and apply to the next message sent:
+- **Temperature**: range 0.0 to 2.0 (slider)
+- **Max Output Tokens**: 0 to 4096 (slider or numeric input)
+- **Presence Penalty**: -2.0 to 2.0 (slider)
+- **Frequency Penalty**: -2.0 to 2.0 (slider)
+- **System Prompt**: multiline text area (string)
+- **Seed**: integer (optional; if unsupported by provider, silently ignore)
+- **Stop Sequences**: comma-separated strings → converted to array
+
+Defaults:
+- temperature: 0.7
+- max_output_tokens: 1024
+- presence_penalty: 0
+- frequency_penalty: 0
+- system_prompt: empty
+- seed: empty
+- stop sequences: empty
+
+---
+## 4) Safety Guardrails (Required)
+Use Hugging Face Inference endpoints with `HF_API_KEY`:
+- **Prompt Safety (pre-check)**: `meta-llama/Llama-Prompt-Guard-2-86M`
+- **Response Safety (post-check)**: `meta-llama/Llama-Guard-3-8B`
+
+Flow:
+1. On send, run the user prompt (and system prompt if present) through Prompt Guard.
+2. If **unsafe or error/uncertain**, block the request (do not call the LLM provider). Show: `⚠️ Prompt blocked by Safety Guardrails`.
+3. If safe, proceed to call the selected provider model.
+4. On response, run the assistant text through Llama Guard.
+5. If **unsafe or error/uncertain**, block the response. Show: `⚠️ Response blocked by Safety Guardrails`.
+
+Do not expose raw error stacks. Show short, standardized errors in the chat.
+
+---
+## 5) Prompt Logging (Local File)
+For every prompt that passes the **pre-check**, append a single line to a local file named `prompts.txt` (in the project root). Format exactly:
+UTC_ISO_TIMESTAMP | provider=model | temp=... | presence=... | frequency=... | seed=... | prompt="..."
+- Create the file if missing.
+- Truncate the prompt to 4000 characters if longer.
+- If the write fails, continue the chat but log a non-user-facing warning.
+
+---
+## 6) Internal API (Local-only)
+Create these **local** routes:
+- **GET `/health`** → returns `OK` (200).
+- **GET `/providers`** → returns the 3 providers and their top-2 models from section 2.
+- **POST `/chat`** → main chat entry point with guarded flow (validate → pre-check → log → call provider → post-check → return).
+
+### `/chat` request (schema – conceptual, not code)
+- `provider`: `openai` | `gemini` | `groq`
+- `model`: one of the provider’s two models above
+- `messages`: array of `{role: "user"|"assistant"|"system", content: string}`
+- `settings`: the tunables in section 3
+- `metadata` (optional): `{traceId?: string}`
+
+### `/chat` response (schema – conceptual)
+- `status`: `success` | `blocked` | `error`
+- `message`: assistant string when `success`
+- `reason`: short text when `blocked` or `error`
+- `usage` (optional): `{inputTokens?, outputTokens?}` if available
+
+---
+## 7) Provider Parameter Mapping (No Code, Just Rules)
+**OpenAI (chat.completions-style)**: temperature→temperature, max_output_tokens→max_tokens, presence_penalty→presence_penalty, frequency_penalty→frequency_penalty, seed→seed (ignore if unsupported), stop_sequences→stop, system_prompt→first system message.
+**Google Gemini**: temperature→temperature, max_output_tokens→max_output_tokens, presence_penalty→presence_penalty, frequency_penalty→frequency_penalty, seed→ignore, stop_sequences→stop_sequences, system_prompt→system instruction.
+**Groq (OpenAI-compatible)**: temperature→temperature, max_output_tokens→max_tokens, presence_penalty→presence_penalty, frequency_penalty→frequency_penalty, seed→ignore, stop_sequences→stop, system_prompt→first system message.
+If a setting isn’t supported by a provider, ignore it silently.
+
+---
+## 8) Frontend — ChatGPT-Style Website (Exact UX)
+Dark theme like ChatGPT. Ensure all buttons work end-to-end.
+
+**Left Sidebar**: Provider dropdown; Model dropdown; New Chat; Chat history list (local).  
+**Center**: Chat bubbles; input + Mic + Send; pending/thinking state; optional title.  
+**Right Settings**: System Prompt; sliders for Temperature/MaxTokens/Penalties; Seed; Stop Sequences; Template buttons (Summarize/Translate/Improve/Key Points/Outline).  
+**Voice**: Speech recognition to input; Speech synthesis for replies (toggle).  
+**Wiring**: Provider change updates models; settings affect next turn; guardrails/errors show as system messages; loading states visible.
+
+---
+## 9) Chat History (Local Persistence)
+Save chats locally with title (first user msg + ts). Selecting a chat restores transcript and settings snapshot. New Chat resets center but keeps provider/model. Add Rename/Delete per chat.
+
+---
+## 10) Default Prompt Templates
+Buttons insert text into input (no auto-send):
+- Summarize (5 bullets + takeaway)
+- Translate (English, preserve tone)
+- Improve Writing (concise, professional, active voice)
+- Key Points (5 points + 3 risks)
+- Outline (H2/H3)
+
+---
+## 11) Standardized Errors (User-Facing)
+- Provider missing or invalid.
+- Model missing or invalid for selected provider.
+- No user message provided.
+- ⚠️ Prompt blocked by Safety Guardrails.
+- ⚠️ Response blocked by Safety Guardrails.
+- Provider request failed. Please try again.
+- Temporary capacity issue. Please retry.
+(Log internals silently; never show raw stack traces.)
+
+---
+## 12) Local-Test Checklist (Acceptance)
+Health OK; Providers OK; Send/Guard/Log flow OK; Settings change output; System prompt works; Voice in/out; History persists and restores.
+
+---
+## 13) Folder & Run Expectations (Local)
+Single local start command (stack of Trae’s choice). Must write `prompts.txt` at project root. CORS OK for localhost.
+
+---
+## 14) Builder Instructions (Trae Behavior)
+Build backend + middleware + frontend so everything works. If an action fails, return standardized error. Prefer a standard web stack. Keep modular for later deploy, but do NOT deploy now.
+
+# END OF SPEC

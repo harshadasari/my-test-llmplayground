@@ -1,0 +1,57 @@
+# TXT: LLM PLAYGROUND — LOCAL OPERATIONS (NO DEPLOY)
+
+## RUN CONDITIONS (LOCALHOST)
+- App must run fully on `http://localhost` with CORS enabled for the same origin.
+- Environment variables must be available to the app process before start.
+- `prompts.txt` must be writable in the project directory.
+
+## LOCAL ENV PREP
+- Ensure the following variables are present in your local environment/session:
+  - `OPENAI_API_KEY`
+  - `GEMINI_API_KEY`
+  - `GROQ_API_KEY`
+  - `HF_API_KEY`
+- If any are missing, provider calls or guardrails will fail with a user‑facing standardized error.
+
+## STANDARDIZED USER‑FACING ERRORS
+- “Provider missing or invalid.”
+- “Model missing or invalid for selected provider.”
+- “No user message provided.”
+- “Prompt blocked by Safety Guardrails.”
+- “Response blocked by Safety Guardrails.”
+- “Provider request failed. Please try again.”
+- “Temporary capacity issue. Please retry.”
+
+## INTERNAL (NON‑USER) LOGGING
+- HF guardrail errors and timeouts
+- Provider timeouts or HTTP errors
+- Prompt log write failures
+- Token/size limit exceedances
+- These should never surface raw stack traces to the UI.
+
+## LOCAL TEST PLAN
+**Functional**
+- Provider switch updates model list instantly.
+- Temperature at 0 vs 2 yields visibly different answer styles.
+- Presence/frequency penalties at −2 vs +2 change behavior.
+- Stop sequences cut the output at expected markers.
+- Seed is applied when provider supports (ignored silently otherwise).
+
+**Safety**
+- Enter a clearly unsafe prompt → pre‑check blocks.
+- Produce a borderline unsafe response → post‑check blocks.
+
+**Persistence**
+- Create multiple chats, switch between them, confirm restore behavior.
+- Confirm `prompts.txt` appended lines for each sent message that passed prompt guard.
+
+**Voice**
+- Microphone input works on your browser for `localhost`.
+- Speech synthesis reads assistant replies when toggle is enabled.
+
+## FEEDING STRATEGY (FOR TRAE BUILDER)
+- Feed files in this order to avoid “thinking limit reached”:
+  1) `llm_playground_local_part1_5.txt`
+  2) `llm_playground_local_part6_10.txt`
+  3) `llm_playground_local_ops_tests.txt`
+- If Trae fails a part: re‑run the **same** part with identical content, then continue.

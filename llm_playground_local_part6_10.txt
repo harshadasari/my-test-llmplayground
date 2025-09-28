@@ -1,0 +1,87 @@
+# TXT: LLM PLAYGROUND — TRAE BUILDER PLAN (LOCAL-ONLY, NO DEPLOY)
+
+# PART 6 — Prompt Logging (Local File)
+**Goal**: Persist all guarded user prompts to `prompts.txt` in project root.
+
+**Rules**
+- One line per prompt.
+- Include UTC timestamp, provider, model, temp, presence, frequency, seed, and raw prompt.
+- Truncate prompt at 4,000 chars to keep lines manageable.
+- If file missing, create it. If write fails, continue chat but record a local warning.
+
+**Acceptance**
+- After multiple messages, `prompts.txt` grows with well‑formed lines.
+
+---
+
+# PART 7 — Frontend (ChatGPT‑style UI)
+**Goal**: Three‑pane local UI with provider/model selection and settings.
+
+**Layout**
+- Left Sidebar: provider dropdown, model dropdown (top 2 for provider), “New Chat”, chat list.
+- Center Chat: conversation bubbles, input box, mic button, send button.
+- Right Settings:
+  - System Prompt (multiline)
+  - Temperature (0–2)
+  - Output tokens (0–4096)
+  - Presence penalty (−2 to 2)
+  - Frequency penalty (−2 to 2)
+  - Seed (integer)
+  - Stop sequences (comma‑separated)
+  - Default Prompt Templates (buttons): Summarize / Translate / Improve Writing / Key Points / Outline
+
+**Behaviors**
+- Provider change updates model list.
+- Messages array retains the current transcript.
+- Sending builds the unified `/chat` request and renders success/blocked/error responses.
+
+**Acceptance**
+- Changing provider+model affects **future** turns only (history remains).
+
+---
+
+# PART 8 — Voice Input & Output (Local)
+**Goal**: Browser voice in/out while running on `localhost`.
+
+**Voice In**
+- Use browser speech recognition; show “Listening…” while active.
+- On result, place text in input (user can edit before sending).
+
+**Voice Out**
+- Use speech synthesis to read assistant replies.
+- Settings toggle: “Read replies aloud”.
+
+**Notes**
+- Most browsers allow mic access on `http://localhost` without HTTPS; if blocked, advise using Chrome.
+
+**Acceptance**
+- On supported browsers, speaking fills the input; replies can be spoken when toggle on.
+
+---
+
+# PART 9 — Chat History (Local Persistence)
+**Goal**: Save and restore chats locally (per browser).
+
+**Rules**
+- Title = first user message prefix + timestamp.
+- Persist transcript + settings snapshot (at send time).
+- Selecting a chat restores its transcript and settings snapshot.
+- “New Chat” resets transcript but keeps current provider/model unless changed.
+
+**Acceptance**
+- Switching between chats restores previous content quickly and reliably.
+
+---
+
+# PART 10 — Default Prompt Templates (Local)
+**Goal**: One‑click templates populate the input; no auto‑send.
+
+**Templates**
+- Summarize: concise 5 bullets + 1 takeaway.
+- Translate: into English, preserve tone/idioms.
+- Improve Writing: concise, professional, active voice.
+- Key Points: top 5 points + 3 risks.
+- Outline: detailed outline with H2/H3 headings.
+
+**Acceptance**
+- Clicking a template fills the input field; user remains in control to edit/send.

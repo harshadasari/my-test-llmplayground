@@ -1,0 +1,143 @@
+# TXT: LLM PLAYGROUND — TRAE BUILDER PLAN (LOCAL-ONLY, NO DEPLOY)
+
+## SCOPE
+- **Local development only** on `http://localhost`.
+- No cloud deploy, no CI/CD. Keep everything runnable from a single machine.
+- Avoid code generation; implement via Trae Builder steps only.
+
+## GLOBAL RULES
+- Read API keys from local environment ONLY (no hardcoding).
+- UI is provider-agnostic; provider mapping happens in middleware.
+- If a guardrail blocks, **do not** call provider; return a clear message.
+- After prompt passes guard, append it to `prompts.txt` with timestamp + model info.
+
+## ENV VARS (declare locally)
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+- `GROQ_API_KEY`
+- `HF_API_KEY` (Hugging Face Inference for guardrails)
+
+## MODEL SETTINGS (single contract)
+- `temperature` (0.0–2.0)
+- `max_output_tokens` (0–4096)
+- `presence_penalty` (-2.0–2.0)
+- `frequency_penalty` (-2.0–2.0)
+- `system_prompt` (string)
+- `seed` (integer, optional)
+- `stop_sequences` (array of strings, optional)
+
+## GUARDRAILS MODELS (HF Inference)
+- Prompt Safety: `meta-llama/Llama-Prompt-Guard-2-86M`
+- Response Safety: `meta-llama/Llama-Guard-3-8B`
+- If HF returns unsafe/uncertain/error → block with: “⚠️ Blocked by Safety Guardrails”.
+
+---
+
+# PART 1 — Local Project Scaffolding
+**Goal**: Create minimal full‑stack app with API, middleware, static web UI, and local logging.
+
+**Tasks**
+1. Create project `llm-playground-local`.
+2. Add API endpoints: `/health`, `/providers`, `/chat`.
+3. Add middleware layer hooks for:
+   - Prompt safety pre‑check (HF)
+   - Provider routing & parameter mapping
+   - Response safety post‑check (HF)
+   - Prompt logging (append to `prompts.txt` beside the project root)
+4. Enable CORS for `http://localhost` origins.
+
+**Acceptance**
+- Visiting `/health` returns “OK”.
+- The app can create/append `prompts.txt` locally. If write fails, proceed but log a non-user-facing warning.
+
+---
+
+# PART 2 — Providers & Top Models (Static)
+**Goal**: Serve a deterministic list of **2 models** per provider without external calls.
+
+**Providers**
+- `openai`: `gpt-4o`, `gpt-4o-mini`
+- `gemini`: `gemini-1.5-pro`, `gemini-1.5-flash`
+- `groq`: `llama3-70b-8192`, `llama3-8b-8192`
+
+**Tasks**
+- `/providers` returns: provider id, display name, array of 2 model IDs (strings).
+
+**Acceptance**
+- Response identical on every run; zero external latency added.
+
+---
+
+# PART 3 — Unified Chat Contract (Local)
+**Goal**: One POST to `/chat` with a provider‑agnostic request/response.
+
+**Request**
+- `provider` in {openai|gemini|groq}
+- `model` in provider’s top 2 (above)
+- `messages`: array of `{role: user|assistant|system, content: string}`
+- `settings`: matches MODEL SETTINGS contract
+- `metadata` (optional): `{traceId?: string}`
+
+**Response**
+- `status`: `success` | `blocked` | `error`
+- `message`: assistant text when `success`
+- `reason`: string for `blocked`/`error`
+- `usage` (optional): `{inputTokens?, outputTokens?}`
+
+**Rules**
+- If `system_prompt` present, inject it as first system message before provider call.
+- Apply `stop_sequences` only if provider supports; otherwise ignore silently.
+
+**Acceptance**
+- Invalid provider/model/messages → returns a standardized error string.
+
+---
+
+# PART 4 — Parameter Mapping (Local Middleware)
+**Goal**: Translate unified settings → provider dialects.
+
+**OpenAI**
+- temperature → temperature
+- max_output_tokens → max_tokens
+- presence_penalty → presence_penalty
+- frequency_penalty → frequency_penalty
+- seed → seed (ignore if unsupported)
+- stop_sequences → stop
+- system_prompt → first system message
+
+**Gemini**
+- temperature → temperature
+- max_output_tokens → max_output_tokens
+- presence_penalty → presence_penalty
+- frequency_penalty → frequency_penalty
+- seed → ignore if unsupported
+- stop_sequences → stop_sequences
+- system_prompt → system instruction
+
+**Groq** (OpenAI-style chat)
+- temperature → temperature
+- max_output_tokens → max_tokens
+- presence_penalty → presence_penalty
+- frequency_penalty → frequency_penalty
+- seed → ignore if unsupported
+- stop_sequences → stop
+- system_prompt → first system message
+
+**Acceptance**
+- For same input, each provider receives equivalent intent (within provider support).
+
+---
+
+# PART 5 — Safety Guardrails Flow (Local)
+**Goal**: Block unsafe prompts/responses locally; only log safe prompts.
+
+**Sequence**
+1. Receive `/chat` request.
+2. Pre‑check (Prompt Guard via HF). If unsafe/uncertain/error → return `status=blocked`, `reason="Prompt blocked by Safety Guardrails"`; **do not** call provider.
+3. Log prompt → append one line to `prompts.txt`: UTC ISO timestamp | provider=model | temp=… | presence=… | frequency=… | seed=… | prompt="…"
+4. Call provider with mapped parameters.
+5. Post‑check (Llama Guard via HF). If unsafe/uncertain/error → return `status=blocked`, `reason="Response blocked by Safety Guardrails"`.
+6. Return success with assistant text (+ optional usage).
+
+**Acceptance**
+- When blocked at either step, no provider output is shown to user.

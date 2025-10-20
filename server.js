@@ -22,11 +22,13 @@ app.use(express.static('public'));
 const healthRoutes = require('./routes/health');
 const providerRoutes = require('./routes/providers');
 const chatRoutes = require('./routes/chat');
+const chatsRoutes = require('./routes/chats');
 
 // Routes
 app.use('/api', healthRoutes);
 app.use('/api', providerRoutes);
 app.use('/api', chatRoutes);
+app.use('/api', chatsRoutes);
 
 // Serve static files
 app.get('/', (req, res) => {

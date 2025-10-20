@@ -4,83 +4,196 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LLM Playground - Local</title>
+    <meta name="description" content="Local LLM Playground for testing and experimenting with language models">
+    
+    <!-- Preconnect to Google Fonts for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- High-quality font loading with font-display: swap for better performance -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin>
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>🤖 LLM Playground</h1>
-            <p class="subtitle">Local-only AI playground with safety guardrails</p>
-            <div class="status-indicator" id="statusIndicator">
-                <span class="status-dot"></span>
-                <span class="status-text">Checking connection...</span>
+    <!-- Skip to main content link for keyboard navigation -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Live region for screen reader announcements -->
+    <div id="announcements" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    
+    <div class="app-container" role="application" aria-label="LLM Playground Application">
+        <!-- Mobile Navigation -->
+        <nav class="mobile-nav" role="navigation" aria-label="Mobile navigation">
+            <button class="mobile-nav-toggle" id="mobileMenuToggle" aria-label="Toggle chat sidebar" aria-expanded="false">
+                <span class="hamburger-icon">☰</span>
+            </button>
+            <h1 class="mobile-nav-title">LLM Playground</h1>
+            <button class="mobile-nav-toggle" id="mobileSettingsToggle" aria-label="Toggle settings sidebar" aria-expanded="false">
+                <span class="settings-icon">⚙</span>
+            </button>
+        </nav>
+
+        <!-- Left Sidebar for Chat History -->
+        <aside class="chat-sidebar" id="chatSidebar" role="complementary" aria-label="Chat History">
+            <div class="sidebar-header">
+                <button id="newChatBtn" class="new-chat-btn" aria-label="Start a new chat conversation">
+                    <span class="plus-icon" aria-hidden="true">+</span>
+                    New Chat
+                </button>
             </div>
-        </header>
+            
+            <nav class="chat-history" aria-label="Chat History Navigation">
+                <div class="chat-history-header">
+                    <h2 id="chat-history-heading">Recent Chats</h2>
+                </div>
+                <div class="chat-list" id="chatList" role="list" aria-labelledby="chat-history-heading">
+                    <!-- Chat history items will be populated here -->
+                </div>
+            </nav>
+        </aside>
 
-        <div class="main-content">
-            <div class="sidebar">
-                <div class="settings-panel">
-                    <h3>⚙️ Settings</h3>
-                    
-                    <div class="setting-group">
-                        <label for="providerSelect">Provider:</label>
-                        <select id="providerSelect">
-                            <option value="">Select Provider...</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="modelSelect">Model:</label>
-                        <select id="modelSelect" disabled>
-                            <option value="">Select Model...</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="temperature">Temperature: <span id="tempValue">0.7</span></label>
-                        <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="maxTokens">Max Tokens: <span id="tokensValue">1000</span></label>
-                        <input type="range" id="maxTokens" min="100" max="4000" step="100" value="1000">
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="systemPrompt">System Prompt:</label>
-                        <textarea id="systemPrompt" placeholder="Enter system prompt (optional)..." rows="3"></textarea>
-                    </div>
-
-                    <div class="advanced-settings">
-                        <details>
-                            <summary>Advanced Settings</summary>
-                            
-                            <div class="setting-group">
-                                <label for="frequencyPenalty">Frequency Penalty: <span id="freqValue">0</span></label>
-                                <input type="range" id="frequencyPenalty" min="-2" max="2" step="0.1" value="0">
-                            </div>
-
-                            <div class="setting-group">
-                                <label for="presencePenalty">Presence Penalty: <span id="presValue">0</span></label>
-                                <input type="range" id="presencePenalty" min="-2" max="2" step="0.1" value="0">
-                            </div>
-
-                            <div class="setting-group">
-                                <label for="seed">Seed (optional):</label>
-                                <input type="number" id="seed" placeholder="Random seed">
-                            </div>
-
-                            <div class="setting-group">
-                                <label for="stopSequences">Stop Sequences:</label>
-                                <input type="text" id="stopSequences" placeholder="Comma-separated (e.g., \n, END)">
-                            </div>
-                        </details>
+        <!-- Main Content Area -->
+        <main class="main-area" id="main-content" role="main">
+            <!-- Header -->
+            <header class="header" role="banner">
+                <div class="header-left">
+                    <h1>✨ LLM Playground</h1>
+                    <div class="status-indicator" id="statusIndicator" role="status" aria-live="polite">
+                        <span class="status-dot" aria-hidden="true"></span>
+                        <span class="status-text">Checking connection...</span>
                     </div>
                 </div>
+                <div class="header-right">
+                    <!-- Settings panel is now always visible -->
+                </div>
+            </header>
 
-                <div class="safety-panel">
-                    <h3>🛡️ Safety Status</h3>
-                    <div class="safety-status" id="safetyStatus">
+            <!-- Chat Area -->
+            <section class="chat-area" aria-label="Chat Conversation">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Chat messages">
+                        <div class="welcome-message" role="article">
+                            <h3>Welcome to LLM Playground! 🚀</h3>
+                            <p>Select a provider and model to start chatting. All conversations are processed locally with safety guardrails.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container" role="form" aria-label="Message input form">
+                        <div class="input-wrapper">
+                            <label for="messageInput" class="sr-only">Type your message</label>
+                            <textarea 
+                                id="messageInput" 
+                                placeholder="Type your message here..." 
+                                rows="3"
+                                disabled
+                                aria-describedby="charCount input-help"
+                                aria-label="Message input"
+                            ></textarea>
+                            <div id="input-help" class="sr-only">Press Enter to send, Shift+Enter for new line</div>
+                            <button id="sendButton" disabled aria-label="Send message" aria-describedby="send-help">
+                                <span class="send-icon" aria-hidden="true">➤</span>
+                                Send
+                            </button>
+                            <div id="send-help" class="sr-only">Send your message to the AI model</div>
+                        </div>
+                        <div class="input-footer">
+                            <span class="char-count" id="charCount" aria-live="polite">0 characters</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Right Settings Panel -->
+        <aside class="settings-sidebar" id="settingsSidebar" role="complementary" aria-label="Application Settings">
+            <div class="settings-panel">
+                <div class="settings-header">
+                    <h2>⚙️ Settings</h2>
+                    <button id="positionToggle" class="position-toggle" title="Move settings panel to left or right side" aria-label="Toggle settings panel position">
+                        <span class="arrow-icon" aria-hidden="true">⇄</span>
+                    </button>
+                </div>
+                
+                <div class="setting-group" role="group" aria-labelledby="provider-label">
+                    <label id="provider-label" for="providerModelSelect">Provider & Model:</label>
+                    <select id="providerModelSelect" aria-describedby="provider-help">
+                        <option value="">Select Provider & Model...</option>
+                    </select>
+                    <div id="provider-help" class="sr-only">Choose the AI provider and model for your conversations</div>
+                </div>
+
+                <div class="setting-group" role="group" aria-labelledby="temp-label">
+                    <label id="temp-label" for="temperature">Temperature: <span id="tempValue" aria-live="polite">0.7</span></label>
+                    <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" 
+                           aria-describedby="temp-help" aria-labelledby="temp-label">
+                    <div id="temp-help" class="sr-only">Controls randomness in responses. Lower values are more focused, higher values are more creative</div>
+                </div>
+
+                <div class="setting-group" role="group" aria-labelledby="tokens-label">
+                    <label id="tokens-label" for="maxTokens">Max Tokens: <span id="tokensValue" aria-live="polite">1000</span></label>
+                    <input type="range" id="maxTokens" min="100" max="4000" step="100" value="1000"
+                           aria-describedby="tokens-help" aria-labelledby="tokens-label">
+                    <div id="tokens-help" class="sr-only">Maximum length of the AI response</div>
+                </div>
+
+                <div class="setting-group" role="group" aria-labelledby="system-label">
+                    <label id="system-label" for="systemPrompt">System Prompt:</label>
+                    <textarea id="systemPrompt" placeholder="Enter system prompt (optional)..." rows="3"
+                              aria-describedby="system-help" aria-labelledby="system-label"></textarea>
+                    <div id="system-help" class="sr-only">Instructions that guide the AI's behavior and responses</div>
+                </div>
+
+                <div class="advanced-settings">
+                    <details>
+                        <summary aria-expanded="false" aria-controls="advanced-content">Advanced Settings</summary>
+                        <div id="advanced-content">
+                            <div class="setting-group" role="group" aria-labelledby="freq-label">
+                                <label id="freq-label" for="frequencyPenalty">Frequency Penalty: <span id="freqValue" aria-live="polite">0</span></label>
+                                <input type="range" id="frequencyPenalty" min="-2" max="2" step="0.1" value="0"
+                                       aria-describedby="freq-help" aria-labelledby="freq-label">
+                                <div id="freq-help" class="sr-only">Reduces repetition of frequently used words</div>
+                            </div>
+
+                            <div class="setting-group" role="group" aria-labelledby="pres-label">
+                                <label id="pres-label" for="presencePenalty">Presence Penalty: <span id="presValue" aria-live="polite">0</span></label>
+                                <input type="range" id="presencePenalty" min="-2" max="2" step="0.1" value="0"
+                                       aria-describedby="pres-help" aria-labelledby="pres-label">
+                                <div id="pres-help" class="sr-only">Encourages talking about new topics</div>
+                            </div>
+
+                            <div class="setting-group" role="group" aria-labelledby="seed-label">
+                                <label id="seed-label" for="seed">Seed (optional):</label>
+                                <input type="number" id="seed" placeholder="Random seed"
+                                       aria-describedby="seed-help" aria-labelledby="seed-label">
+                                <div id="seed-help" class="sr-only">Number for reproducible responses</div>
+                            </div>
+
+                            <div class="setting-group" role="group" aria-labelledby="stop-label">
+                                <label id="stop-label" for="stopSequences">Stop Sequences:</label>
+                                <input type="text" id="stopSequences" placeholder="Comma-separated (e.g., \n, END)"
+                                       aria-describedby="stop-help" aria-labelledby="stop-label">
+                                <div id="stop-help" class="sr-only">Text sequences that will stop the AI response</div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="safety-panel" role="group" aria-labelledby="safety-heading">
+                    <h3 id="safety-heading">🛡️ Safety Status</h3>
+                    <div class="safety-toggle-container">
+                        <label class="toggle-switch" for="guardrailsToggle">
+                            <input type="checkbox" id="guardrailsToggle" checked 
+                                   aria-describedby="guardrails-help">
+                            <span class="toggle-slider" aria-hidden="true"></span>
+                            <span class="toggle-label">Enable Guardrails</span>
+                        </label>
+                        <div id="guardrails-help" class="sr-only">Toggle safety guardrails for content filtering</div>
+                    </div>
+                    <div class="safety-status" id="safetyStatus" role="status" aria-live="polite">
                         <div class="safety-item">
                             <span class="safety-label">Prompt Guard:</span>
                             <span class="safety-value" id="promptGuardStatus">Ready</span>
@@ -92,42 +205,12 @@
                     </div>
                 </div>
             </div>
-
-            <div class="chat-area">
-                <div class="chat-container">
-                    <div class="chat-messages" id="chatMessages">
-                        <div class="welcome-message">
-                            <h3>Welcome to LLM Playground! 🚀</h3>
-                            <p>Select a provider and model to start chatting. All conversations are processed locally with safety guardrails.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="chat-input-container">
-                        <div class="input-wrapper">
-                            <textarea 
-                                id="messageInput" 
-                                placeholder="Type your message here..." 
-                                rows="3"
-                                disabled
-                            ></textarea>
-                            <button id="sendButton" disabled>
-                                <span class="send-icon">➤</span>
-                                Send
-                            </button>
-                        </div>
-                        <div class="input-footer">
-                            <span class="char-count" id="charCount">0 characters</span>
-                            <button id="clearButton" class="clear-btn">Clear Chat</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </aside>
     </div>
 
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Processing your request...</div>
+    <div class="loading-overlay" id="loadingOverlay" role="dialog" aria-modal="true" aria-labelledby="loading-title">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <div class="loading-text" id="loading-title">Processing your request...</div>
     </div>
 
     <script src="script.js"></script>
